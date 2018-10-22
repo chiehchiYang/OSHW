@@ -1,8 +1,20 @@
-obj-m:=module1.o    
-KDIR:= /lib/modules/$(shell uname -r)/build
-PWD:= $(shell pwd) 
+CC := gcc
+override CFLAGS += -O3 -Wall
 
-default:
-	$(MAKE) -C $(KDIR) M=$(PWD) modules  
+SOURCE := simple_pstree.c
+BINARY := simple-pstree
+
+GIT_HOOKS := .git/hooks/applied
+
+all: $(GIT_HOOKS) $(BINARY)
+
+$(GIT_HOOKS):
+	@.githooks/install-git-hooks
+	@echo
+
+$(BINARY): $(SOURCE) $(patsubst %.c, %.h, $(SOURCE))
+	$(CC) $(CFLAGS) $< -o $@
+
+.PHONY: clean
 clean:
-	$(MAKE) -C $(KDIR) M=$(PWD) clean
+	rm -f *.o $(BINARY)

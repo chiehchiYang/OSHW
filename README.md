@@ -1,2 +1,1 @@
-# OSHW
-HW for OS HW
+# HW1-simple-pstree
