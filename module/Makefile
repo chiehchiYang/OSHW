@@ -1,4 +1,4 @@
-MODULE_NAME := ksimple_pstree
+MODULE_NAME := hello
 obj-m := $(MODULE_NAME).o
 KERN_VER := $(shell uname -r)
 KERN_DIR ?= /lib/modules/$(KERN_VER)/build

@@ -1,20 +1,13 @@
 CC := gcc
 override CFLAGS += -O3 -Wall
 
-SOURCE := simple_pstree.c
-BINARY := simple-pstree
+SOURCE := hello.c
+BINARY := hello
 
-GIT_HOOKS := .git/hooks/applied
+all:$(BINARY)
 
-all: $(GIT_HOOKS) $(BINARY)
+$(BINARY):$(SOURCE)
+	$(CC) $(CFLAGS) -o $(BINARY) $(SOURCE)
 
-$(GIT_HOOKS):
-	@.githooks/install-git-hooks
-	@echo
-
-$(BINARY): $(SOURCE) $(patsubst %.c, %.h, $(SOURCE))
-	$(CC) $(CFLAGS) $< -o $@
-
-.PHONY: clean
 clean:
 	rm -f *.o $(BINARY)
