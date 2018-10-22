@@ -1,0 +1,1 @@
+cmd_/home/os2018/Desktop/OSHW/module/hello.ko := ld -r -m elf_x86_64 -z max-page-size=0x200000 -T ./scripts/module-common.lds --build-id  -o /home/os2018/Desktop/OSHW/module/hello.ko /home/os2018/Desktop/OSHW/module/hello.o /home/os2018/Desktop/OSHW/module/hello.mod.o ;  true

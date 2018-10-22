@@ -2,26 +2,20 @@
 #include <net/sock.h>
 #include <linux/netlink.h>
 #include <linux/skbuff.h>
+#include <linux/init.h>
+#include <linux/kernel.h>
+#include <linux/sched/signal.h>
 #define NETLINK_USER 31
 
 struct sock *nl_sk = NULL;
-
-static void hello_nl_recv_msg(struct sk_buff *skb)
+void sendnlmsg(char *msg, int pid)
 {
-
-    struct nlmsghdr *nlh;
-    int pid;
     struct sk_buff *skb_out;
+    struct nlmsghdr *nlh;
     int msg_size;
-    char *msg = "Hello from kernel";
     int res;
+    //msg = (char *)nlmsg_data(nlh); //return message = hello
 
-    printk(KERN_INFO "Entering: %s\n", __FUNC__);
-
-    nlh = (struct nlmsghdr *)skb->data;
-    printk(KERN_INFO "Netlink received msg payload:%s\n", (char *)nlmsg_data(nlh));
-    pid = nlh->nlmsg_pid; /*pid of sending process */
-    msg = (char *)nlmsg_data(nlh);
     msg_size = strlen(msg);
 
     skb_out = nlmsg_new(msg_size, 0);
@@ -41,10 +35,30 @@ static void hello_nl_recv_msg(struct sk_buff *skb)
         printk(KERN_INFO "Error while sending bak to user\n");
 }
 
+static void hello_nl_recv_msg(struct sk_buff *skb)
+{
+
+    struct nlmsghdr *nlh;
+    int pid;
+    //struct sk_buff *skb_out;
+
+    //char *msg; // = "Hello from kernel";
+
+    printk(KERN_INFO "Entering: %s\n", __FUNCTION__);
+
+    nlh = (struct nlmsghdr *)skb->data;
+    printk(KERN_INFO "Netlink received msg payload:%s\n", (char *)nlmsg_data(nlh));
+    pid = nlh->nlmsg_pid; /*pid of sending process */
+
+    //for -c
+    struct task_struct *p;
+    sendnlmsg("hello hi", pid);
+}
+
 static int __init hello_init(void)
 {
 
-    printk("Entering: %s\n", __FUNC__);
+    printk("Entering: %s\n", __FUNCTION__);
 
     struct netlink_kernel_cfg cfg = {
         .input = hello_nl_recv_msg,
