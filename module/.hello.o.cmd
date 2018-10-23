@@ -1229,6 +1229,7 @@ deps_/home/os2018/Desktop/OSHW/module/hello.o := \
     $(wildcard include/config/have/copy/thread/tls.h) \
     $(wildcard include/config/have/exit/thread.h) \
     $(wildcard include/config/arch/wants/dynamic/task/struct.h) \
+  include/linux/proc_fs.h \
 
 /home/os2018/Desktop/OSHW/module/hello.o: $(deps_/home/os2018/Desktop/OSHW/module/hello.o)
 

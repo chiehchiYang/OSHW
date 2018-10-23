@@ -5,8 +5,11 @@
 #include <linux/init.h>
 #include <linux/kernel.h>
 #include <linux/sched/signal.h>
-#define NETLINK_USER 31
+#include <linux/proc_fs.h>
+#include <linux/sched.h>
 
+#define NETLINK_USER 31
+static int int_pid = 0;
 struct sock *nl_sk = NULL;
 void sendnlmsg(char *msg, int pid)
 {
@@ -42,21 +45,65 @@ static void hello_nl_recv_msg(struct sk_buff *skb)
     int pid;
     //struct sk_buff *skb_out;
 
-    //char *msg; // = "Hello from kernel";
-
+    char *msg = kmalloc(1024, GFP_KERNEL); // = "Hello from kernel";
+    msg[0] = '\0';
     printk(KERN_INFO "Entering: %s\n", __FUNCTION__);
 
     nlh = (struct nlmsghdr *)skb->data;
-    printk(KERN_INFO "Netlink received msg payload:%s\n", (char *)nlmsg_data(nlh));
     pid = nlh->nlmsg_pid; /*pid of sending process */
 
-    //for -c
-    struct task_struct *p;
-    sendnlmsg("hello hi", pid);
+    char number[1024];
+    struct task_struct *task, *children;
+
+    for_each_process(task)
+    {
+        if (task->mm == NULL)
+        {
+            //{ //>=0
+            sprintf(number, "%s(%d)\n", task->comm, task->pid);
+            strcat(msg, number);
+
+            for_each_process(children)
+            {
+                if (children->real_parent->pid == task->pid)
+                {
+                    sprintf(number, "\t\t\t\t%s(%d)\n", task->comm, task->pid);
+                    strcat(msg, number);
+                }
+            }
+        }
+    }
+    sendnlmsg(msg, pid);
+    /*
+
+            //process_name(pid)p->comm p->pid
+            strcat(msg, rightPa);
+            
+            sprintf(number, "%s\n", p->comm);
+            printk(KERN_INFO "Netlink received msg payload:%s\n", p->comm);
+ 
+    */
+    //sendnlmsg(msg, pid);
+}
+void dfs(struct task_struct *task)
+{
+    struct task_struct *child;
+    struct list_head *list;
+
+    //printk(KERN_INFO "Name: %-20s state: %ld\tprocess id: %d\n", task->comm, task->state, task->pid);
+    /*
+    list_for_each(list, &task->children)
+    {
+        child = list_entry(list, struct task_struct, sibling);
+        dfs(child);
+    }
+    */
 }
 
 static int __init hello_init(void)
 {
+
+    dfs(&init_task);
 
     printk("Entering: %s\n", __FUNCTION__);
 
