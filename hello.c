@@ -7,7 +7,7 @@
 
 #define NETLINK_USER 31
 
-#define MAX_PAYLOAD 1024 /* maximum payload size*/
+#define MAX_PAYLOAD 10000 /* maximum payload size*/
 struct sockaddr_nl src_addr, dest_addr;
 struct nlmsghdr *nlh = NULL;
 struct iovec iov;
@@ -53,6 +53,6 @@ int main()
 
     /* Read message from kernel */
     recvmsg(sock_fd, &msg, 0);
-    printf("Received message payload: %s\n", NLMSG_DATA(nlh));
+    printf("%s", NLMSG_DATA(nlh));
     close(sock_fd);
 }

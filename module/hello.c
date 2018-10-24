@@ -11,7 +11,152 @@
 #define NETLINK_USER 31
 static int int_pid = 0;
 struct sock *nl_sk = NULL;
-void sendnlmsg(char *msg, int pid)
+char msg[10000];
+void dfs(struct task_struct *task)
+{
+    struct task_struct *child;
+    struct list_head *list;
+    int i;
+    char tem[100];
+    char *space = "    ";
+
+    memset(tem, 0, sizeof(tem));
+    struct task_struct *test2;
+    test2 = task;
+    int counter = 0;
+    while (1)
+    {
+        if (test2->parent->pid == 1 || test2->parent->pid == 2)
+        {
+            break;
+        }
+        else
+        {
+            test2 = test2->parent;
+            counter++;
+        }
+    } /*
+    if (task->parent->pid != 0)
+    {
+        counter++;
+        if (task->parent->parent->pid != 0)
+        {
+            counter++;
+            if (task->parent->parent->parent->pid != 0) //3
+            {
+                counter++;
+                if (task->parent->parent->parent->parent->pid != 0)
+                {
+                    counter++;
+                    if (task->parent->parent->parent->parent->parent->pid != 0)
+                    {
+                        counter++;
+                        if (task->parent->parent->parent->parent->parent->parent->pid != 0) //6
+                        {
+                            counter++;
+                            if (task->parent->parent->parent->parent->parent->parent->parent->pid != 0) //7
+                            {
+                                counter++;
+                                if (task->parent->parent->parent->parent->parent->parent->parent->parent->pid != 0) //8
+                                {
+                                    counter++;
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }*/
+
+    for (i = 0; i < counter; i++)
+    {
+        strcat(msg, space);
+    }
+    sprintf(tem, "%s(%d)\n", task->comm, task->pid);
+    strcat(msg, tem);
+    /*
+    if (counter == 0)
+        printk(KERN_INFO "%s(%d)%d con:%d", task->comm, task->pid, task->parent->pid, counter);
+    else if (counter == 1)
+        printk(KERN_INFO "\t%s(%d)%d con:%d", task->comm, task->pid, task->parent->pid, counter);
+    else if (counter == 2)
+        printk(KERN_INFO "\t\t%s(%d)%d con:%d", task->comm, task->pid, task->parent->pid, counter);
+    else if (counter == 3)
+        printk(KERN_INFO "\t\t\t%s(%d)%d con:%d", task->comm, task->pid, task->parent->pid, counter);
+*/
+    list_for_each(list, &task->children)
+    {
+        child = list_entry(list, struct task_struct, sibling);
+        // printk(KERN_INFO "[pid  %d] pname %s,", child->pid, child->comm);
+        dfs(child);
+    }
+}
+void find_sibling(struct task_struct *task)
+{
+    struct task_struct *child;
+    struct list_head *list2;
+    char tem1[100];
+    list_for_each(list2, &task->parent->children)
+    {
+        child = list_entry(list2, struct task_struct, sibling);
+        if (child->pid != task->pid)
+        {
+            sprintf(tem1, "%s(%d)\n", child->comm, child->pid);
+            strcat(msg, tem1);
+        }
+        //printk(KERN_INFO "[pid  %d] pname %s,", child->pid, child->comm);
+    }
+}
+
+void find_ancestor(struct task_struct *task, int level)
+{
+
+    if (task->parent->pid == 1 || task->parent->pid == 2)
+    {
+        char tem1[100];
+        sprintf(tem1, "%s(%d)\n", task->comm, task->pid);
+        strcat(msg, tem1);
+    }
+    else
+    {
+
+        find_ancestor(task->parent, level--);
+        char tem[100];
+        char *space = "    ";
+        int m;
+        printk(KERN_INFO "%s(%d)", task->comm, task->pid);
+        for (m = 0; m < level; m++)
+        {
+            strcat(msg, space);
+        }
+        sprintf(tem, "%s(%d)\n", task->comm, task->pid);
+        strcat(msg, tem);
+    }
+}
+
+void print_ancestor(struct task_struct *task)
+{
+    struct task_struct *test;
+    test = task;
+    int counter = 1;
+    while (1)
+    {
+        if (test->parent->pid == 1 || test->parent->pid == 2)
+        {
+            break;
+        }
+        else
+        {
+            test = test->parent;
+            counter++;
+        }
+    }
+
+    find_ancestor(task, counter);
+}
+
+void sendnlmsg(int pid)
 {
     struct sk_buff *skb_out;
     struct nlmsghdr *nlh;
@@ -43,70 +188,48 @@ static void hello_nl_recv_msg(struct sk_buff *skb)
 
     struct nlmsghdr *nlh;
     int pid;
-    //struct sk_buff *skb_out;
-
-    char *msg = kmalloc(1024, GFP_KERNEL); // = "Hello from kernel";
-    msg[0] = '\0';
+    memset(msg, 0, sizeof(msg));
     printk(KERN_INFO "Entering: %s\n", __FUNCTION__);
 
     nlh = (struct nlmsghdr *)skb->data;
     pid = nlh->nlmsg_pid; /*pid of sending process */
 
-    char number[1024];
-    struct task_struct *task, *children;
+    dfs(&init_task); //For entire pstree
 
-    for_each_process(task)
-    {
-        if (task->mm == NULL)
-        {
-            //{ //>=0
-            sprintf(number, "%s(%d)\n", task->comm, task->pid);
-            strcat(msg, number);
-
-            for_each_process(children)
-            {
-                if (children->real_parent->pid == task->pid)
-                {
-                    sprintf(number, "\t\t\t\t%s(%d)\n", task->comm, task->pid);
-                    strcat(msg, number);
-                }
-            }
-        }
-    }
-    sendnlmsg(msg, pid);
-    /*
-
-            //process_name(pid)p->comm p->pid
-            strcat(msg, rightPa);
-            
-            sprintf(number, "%s\n", p->comm);
-            printk(KERN_INFO "Netlink received msg payload:%s\n", p->comm);
- 
+    /*//For specific pid pstree
+    struct task_struct *det_pid;
+    pid_t dpid = 1111;
+    det_pid = pid_task(find_vpid(dpid), PIDTYPE_PID);
+    dfs(det_pid);
     */
-    //sendnlmsg(msg, pid);
-}
-void dfs(struct task_struct *task)
-{
-    struct task_struct *child;
-    struct list_head *list;
+    //struct task_struct;
 
-    //printk(KERN_INFO "Name: %-20s state: %ld\tprocess id: %d\n", task->comm, task->state, task->pid);
+    //For sibling //test pid :1562Xorg(1562) dbus-daemon(1570) gnome-session-b(1576)
+    // list for each
+
+    //struct task_struct *det_pid;
+    // pid_t dpid = 1810;
+    //det_pid = pid_task(find_vpid(dpid), PIDTYPE_PID);
+    //find_sibling(det_pid);
+
+    //1619
     /*
-    list_for_each(list, &task->children)
-    {
-        child = list_entry(list, struct task_struct, sibling);
-        dfs(child);
-    }
-    */
+    struct task_struct *det_pid;
+    pid_t dpid = 1348;
+    det_pid = pid_task(find_vpid(dpid), PIDTYPE_PID);
+    print_ancestor(det_pid);
+*/
+    sendnlmsg(pid);
 }
 
 static int __init hello_init(void)
 {
 
-    dfs(&init_task);
-
     printk("Entering: %s\n", __FUNCTION__);
-
+    //msg = kmalloc(1024, GFP_KERNEL);
+    //msg[0] = '\0';
+    //memset(msg, 0, sizeof(msg));
+    //dfs(&init_task);
     struct netlink_kernel_cfg cfg = {
         .input = hello_nl_recv_msg,
     };
