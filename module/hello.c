@@ -11,31 +11,13 @@
 #define NETLINK_USER 31
 static int int_pid = 0;
 struct sock *nl_sk = NULL;
+int for_count;
 char msg[10000];
-void dfs(struct task_struct *task)
-{
-    struct task_struct *child;
-    struct list_head *list;
-    int i;
-    char tem[100];
-    char *space = "    ";
 
-    memset(tem, 0, sizeof(tem));
-    struct task_struct *test2;
-    test2 = task;
+int find_level(struct task_struct *task)
+{
     int counter = 0;
-    while (1)
-    {
-        if (test2->parent->pid == 1 || test2->parent->pid == 2)
-        {
-            break;
-        }
-        else
-        {
-            test2 = test2->parent;
-            counter++;
-        }
-    } /*
+
     if (task->parent->pid != 0)
     {
         counter++;
@@ -60,6 +42,54 @@ void dfs(struct task_struct *task)
                                 if (task->parent->parent->parent->parent->parent->parent->parent->parent->pid != 0) //8
                                 {
                                     counter++;
+                                    if (task->parent->parent->parent->parent->parent->parent->parent->parent->parent->pid != 0) //9
+                                    {
+                                        counter++;
+                                        if (task->parent->parent->parent->parent->parent->parent->parent->parent->parent->parent->pid != 0) //10
+                                        {
+                                            counter++;
+                                            if (task->parent->parent->parent->parent->parent->parent->parent->parent->parent->parent->parent->pid != 0) //11
+                                            {
+                                                counter++;
+                                                if (task->parent->parent->parent->parent->parent->parent->parent->parent->parent->parent->parent->parent->pid != 0) //12
+                                                {
+                                                    counter++;
+                                                    if (task->parent->parent->parent->parent->parent->parent->parent->parent->parent->parent->parent->parent->parent->pid != 0) //13
+                                                    {
+                                                        counter++;
+                                                        if (task->parent->parent->parent->parent->parent->parent->parent->parent->parent->parent->parent->parent->parent->parent->pid != 0) //14
+                                                        {
+                                                            counter++;
+                                                            if (task->parent->parent->parent->parent->parent->parent->parent->parent->parent->parent->parent->parent->parent->parent->parent->pid != 0) //15
+                                                            {
+                                                                counter++;
+                                                                if (task->parent->parent->parent->parent->parent->parent->parent->parent->parent->parent->parent->parent->parent->parent->parent->parent->pid != 0) //16
+                                                                {
+                                                                    counter++;
+                                                                    if (task->parent->parent->parent->parent->parent->parent->parent->parent->parent->parent->parent->parent->parent->parent->parent->parent->parent->pid != 0) //17
+                                                                    {
+                                                                        counter++;
+                                                                        if (task->parent->parent->parent->parent->parent->parent->parent->parent->parent->parent->parent->parent->parent->parent->parent->parent->parent->parent->pid != 0) //18
+                                                                        {
+                                                                            counter++;
+                                                                            if (task->parent->parent->parent->parent->parent->parent->parent->parent->parent->parent->parent->parent->parent->parent->parent->parent->parent->parent->parent->pid != 0) //19
+                                                                            {
+                                                                                counter++;
+                                                                                if (task->parent->parent->parent->parent->parent->parent->parent->parent->parent->parent->parent->parent->parent->parent->parent->parent->parent->parent->parent->pid != 0) //20
+                                                                                {
+                                                                                    counter++;
+                                                                                }
+                                                                            }
+                                                                        }
+                                                                    }
+                                                                }
+                                                            }
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
                                 }
                             }
                         }
@@ -67,7 +97,21 @@ void dfs(struct task_struct *task)
                 }
             }
         }
-    }*/
+    }
+
+    return counter;
+}
+void dfs(struct task_struct *task)
+{
+    struct task_struct *child;
+    struct list_head *list;
+    int i;
+    char tem[100];
+    char *space = "    ";
+
+    memset(tem, 0, sizeof(tem));
+
+    int counter = find_level(task);
 
     for (i = 0; i < counter; i++)
     {
@@ -75,20 +119,9 @@ void dfs(struct task_struct *task)
     }
     sprintf(tem, "%s(%d)\n", task->comm, task->pid);
     strcat(msg, tem);
-    /*
-    if (counter == 0)
-        printk(KERN_INFO "%s(%d)%d con:%d", task->comm, task->pid, task->parent->pid, counter);
-    else if (counter == 1)
-        printk(KERN_INFO "\t%s(%d)%d con:%d", task->comm, task->pid, task->parent->pid, counter);
-    else if (counter == 2)
-        printk(KERN_INFO "\t\t%s(%d)%d con:%d", task->comm, task->pid, task->parent->pid, counter);
-    else if (counter == 3)
-        printk(KERN_INFO "\t\t\t%s(%d)%d con:%d", task->comm, task->pid, task->parent->pid, counter);
-*/
     list_for_each(list, &task->children)
     {
         child = list_entry(list, struct task_struct, sibling);
-        // printk(KERN_INFO "[pid  %d] pname %s,", child->pid, child->comm);
         dfs(child);
     }
 }
@@ -105,14 +138,13 @@ void find_sibling(struct task_struct *task)
             sprintf(tem1, "%s(%d)\n", child->comm, child->pid);
             strcat(msg, tem1);
         }
-        //printk(KERN_INFO "[pid  %d] pname %s,", child->pid, child->comm);
     }
 }
 
-void find_ancestor(struct task_struct *task, int level)
+void find_ancestor(struct task_struct *task)
 {
 
-    if (task->parent->pid == 1 || task->parent->pid == 2)
+    if (task->parent->pid == 0) //|| task->parent->pid == 2
     {
         char tem1[100];
         sprintf(tem1, "%s(%d)\n", task->comm, task->pid);
@@ -121,10 +153,11 @@ void find_ancestor(struct task_struct *task, int level)
     else
     {
 
-        find_ancestor(task->parent, level--);
+        find_ancestor(task->parent);
         char tem[100];
         char *space = "    ";
-        int m;
+        int m = 0;
+        int level = find_level(task);
         printk(KERN_INFO "%s(%d)", task->comm, task->pid);
         for (m = 0; m < level; m++)
         {
@@ -138,22 +171,8 @@ void find_ancestor(struct task_struct *task, int level)
 void print_ancestor(struct task_struct *task)
 {
     struct task_struct *test;
-    test = task;
-    int counter = 1;
-    while (1)
-    {
-        if (test->parent->pid == 1 || test->parent->pid == 2)
-        {
-            break;
-        }
-        else
-        {
-            test = test->parent;
-            counter++;
-        }
-    }
 
-    find_ancestor(task, counter);
+    find_ancestor(task);
 }
 
 void sendnlmsg(int pid)
@@ -162,7 +181,6 @@ void sendnlmsg(int pid)
     struct nlmsghdr *nlh;
     int msg_size;
     int res;
-    //msg = (char *)nlmsg_data(nlh); //return message = hello
 
     msg_size = strlen(msg);
 
@@ -194,7 +212,7 @@ static void hello_nl_recv_msg(struct sk_buff *skb)
     nlh = (struct nlmsghdr *)skb->data;
     pid = nlh->nlmsg_pid; /*pid of sending process */
 
-    dfs(&init_task); //For entire pstree
+    //dfs(&init_task); //For entire pstree
 
     /*//For specific pid pstree
     struct task_struct *det_pid;
@@ -212,13 +230,11 @@ static void hello_nl_recv_msg(struct sk_buff *skb)
     //det_pid = pid_task(find_vpid(dpid), PIDTYPE_PID);
     //find_sibling(det_pid);
 
-    //1619
-    /*
     struct task_struct *det_pid;
-    pid_t dpid = 1348;
+    pid_t dpid = task_pid_nr(current);
     det_pid = pid_task(find_vpid(dpid), PIDTYPE_PID);
     print_ancestor(det_pid);
-*/
+
     sendnlmsg(pid);
 }
 
