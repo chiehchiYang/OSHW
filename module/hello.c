@@ -7,6 +7,7 @@
 #include <linux/sched/signal.h>
 #include <linux/proc_fs.h>
 #include <linux/sched.h>
+#include <linux/string.h>
 
 #define NETLINK_USER 31
 static int int_pid = 0;
@@ -101,6 +102,33 @@ int find_level(struct task_struct *task)
 
     return counter;
 }
+void dfs1(struct task_struct *task,struct task_struct *ori)
+{
+    struct task_struct *child;
+    struct list_head *list;
+    int i;
+    char tem[100];
+    char *space = "    ";
+
+    memset(tem, 0, sizeof(tem));
+
+    int counter = find_level(task);
+    int counter_ori = find_level(ori);
+    counter = counter - counter_ori;
+    for (i = 0; i < counter; i++)
+    {
+        strcat(msg, space);
+    }
+    if(task->pid !=0) {
+    sprintf(tem, "%s(%d)\n", task->comm, task->pid);
+    strcat(msg, tem);
+    }
+    list_for_each(list, &task->children)
+    {
+        child = list_entry(list, struct task_struct, sibling);
+        dfs1(child,ori);
+    }
+}
 void dfs(struct task_struct *task)
 {
     struct task_struct *child;
@@ -117,8 +145,10 @@ void dfs(struct task_struct *task)
     {
         strcat(msg, space);
     }
+    if(task->pid !=0) {
     sprintf(tem, "%s(%d)\n", task->comm, task->pid);
     strcat(msg, tem);
+    }
     list_for_each(list, &task->children)
     {
         child = list_entry(list, struct task_struct, sibling);
@@ -200,40 +230,131 @@ void sendnlmsg(int pid)
     if (res < 0)
         printk(KERN_INFO "Error while sending bak to user\n");
 }
-
+/*
+int if_pid_exist(pid_t pid)
+{
+    struct task_struct *det_pid;
+    det_pid = pid_task(find_vpid(pid), PIDTYPE_PID);
+    if (det_pid == NULL)
+        return 0;
+    else
+        return 1;
+}
+*/
 static void hello_nl_recv_msg(struct sk_buff *skb)
 {
 
     struct nlmsghdr *nlh;
     int pid;
+    char rec_mes[100];
     memset(msg, 0, sizeof(msg));
     printk(KERN_INFO "Entering: %s\n", __FUNCTION__);
 
     nlh = (struct nlmsghdr *)skb->data;
     pid = nlh->nlmsg_pid; /*pid of sending process */
+    memset(rec_mes, 0, sizeof(rec_mes));
 
-    //dfs(&init_task); //For entire pstree
-
-    /*//For specific pid pstree
-    struct task_struct *det_pid;
-    pid_t dpid = 1111;
-    det_pid = pid_task(find_vpid(dpid), PIDTYPE_PID);
-    dfs(det_pid);
-    */
-    //struct task_struct;
-
-    //For sibling //test pid :1562Xorg(1562) dbus-daemon(1570) gnome-session-b(1576)
-    // list for each
-
-    //struct task_struct *det_pid;
-    // pid_t dpid = 1810;
-    //det_pid = pid_task(find_vpid(dpid), PIDTYPE_PID);
-    //find_sibling(det_pid);
+    strcat(rec_mes, (char *)nlmsg_data(nlh));
 
     struct task_struct *det_pid;
-    pid_t dpid = task_pid_nr(current);
-    det_pid = pid_task(find_vpid(dpid), PIDTYPE_PID);
-    print_ancestor(det_pid);
+    pid_t dpid = 0;
+    char *ptr;
+    int tem = 0;
+    char *space = " ";
+
+    //strcat(msg, rec_mes);
+    //ptr = strchr(rec_mes, 'c');
+    //ptr++;
+    //  printk(KERN_INFO "---------->>print something");
+    //dfs(&init_task);
+    //printk(KERN_INFO "---------->>print something  %s", rec_mes[1]);
+    //printk(KERN_INFO "---------->>print something  %s", rec_mes[0]);
+    //dfs(&init_task);
+
+    if (rec_mes[1] == 'a')
+    {
+        // printk(KERN_INFO "---------->>print something  %s", strchr(rec_mes, 'a'));
+        dfs(&init_task); //For entire pstree
+    }
+    else if (rec_mes[1] == 'c')
+    {
+        ptr = strchr(rec_mes, 'c');
+        ptr++;        
+            printk(KERN_ERR "before convert ");
+        if (kstrtoint(ptr, 10, &tem) != 0){
+            printk(KERN_ERR "convert error");
+            dfs(&init_task);
+        }else{
+        printk(KERN_ERR "after convert %d ", tem);
+        dpid = tem; //tem;
+        det_pid = pid_task(find_vpid(dpid), PIDTYPE_PID);
+        
+        if (det_pid == NULL)
+            strcat(msg, space);
+        else
+            dfs1(det_pid,det_pid);
+        }
+        
+    }
+    else if (rec_mes[1] == 's')
+    {
+        ptr = strchr(rec_mes, 's');
+        ptr++;
+        printk(KERN_ERR "before convert ");
+        if (kstrtoint(ptr, 10, &tem) != 0){
+            printk(KERN_ERR "convert error");
+            dpid = task_pid_nr(current);
+            det_pid = pid_task(find_vpid(dpid), PIDTYPE_PID);
+            find_sibling(det_pid);
+        }else{
+        printk(KERN_ERR "after convert %d ", tem);
+        dpid = tem; //tem;
+        det_pid = pid_task(find_vpid(dpid), PIDTYPE_PID);
+        
+        if (det_pid == NULL)
+            strcat(msg, space);
+        else
+            find_sibling(det_pid);
+        }
+    }
+    else if (rec_mes[1] == 'p')
+    {
+        ptr = strchr(rec_mes, 'p');
+        ptr++;
+        printk(KERN_ERR "before convert ");
+        if (kstrtoint(ptr, 10, &tem) != 0){
+            printk(KERN_ERR "convert error");
+            dpid = task_pid_nr(current);
+            det_pid = pid_task(find_vpid(dpid), PIDTYPE_PID);
+            print_ancestor(det_pid);
+        }else{
+        printk(KERN_ERR "after convert %d ", tem);
+        dpid = tem; //tem;
+        det_pid = pid_task(find_vpid(dpid), PIDTYPE_PID);
+        
+        if (det_pid == NULL)
+            strcat(msg, space);
+        else
+            print_ancestor(det_pid);
+        }
+    }
+    else
+    {
+        if (kstrtoint(rec_mes, 10, &tem) != 0){
+            
+            strcat(msg, space);
+        }else{
+        printk(KERN_ERR "after convert %d ", tem);
+        dpid = tem; //tem;
+        det_pid = pid_task(find_vpid(dpid), PIDTYPE_PID);
+        
+        if (det_pid == NULL)
+            
+            strcat(msg, space);
+        else
+            dfs1(det_pid,det_pid);
+        }
+    }
 
     sendnlmsg(pid);
 }
@@ -242,10 +363,6 @@ static int __init hello_init(void)
 {
 
     printk("Entering: %s\n", __FUNCTION__);
-    //msg = kmalloc(1024, GFP_KERNEL);
-    //msg[0] = '\0';
-    //memset(msg, 0, sizeof(msg));
-    //dfs(&init_task);
     struct netlink_kernel_cfg cfg = {
         .input = hello_nl_recv_msg,
     };

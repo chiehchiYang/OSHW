@@ -14,9 +14,8 @@ struct iovec iov;
 int sock_fd;
 struct msghdr msg;
 
-int main()
+int main(int argc, char *argv[]) //argv[1]
 {
-    //printf("hihi");
     sock_fd = socket(PF_NETLINK, SOCK_RAW, NETLINK_USER);
     if (sock_fd < 0)
         return -1;
@@ -37,8 +36,16 @@ int main()
     nlh->nlmsg_len = NLMSG_SPACE(MAX_PAYLOAD);
     nlh->nlmsg_pid = getpid();
     nlh->nlmsg_flags = 0;
-
-    strcpy(NLMSG_DATA(nlh), "Hello");
+    char *a = "-a";
+    //printf("%s", argv[0]);
+    if (argc == 1)
+    {
+        strcpy(NLMSG_DATA(nlh), a);
+    }
+    else
+    {
+        strcpy(NLMSG_DATA(nlh), argv[1]);
+    }
 
     iov.iov_base = (void *)nlh;
     iov.iov_len = nlh->nlmsg_len;
@@ -46,10 +53,7 @@ int main()
     msg.msg_namelen = sizeof(dest_addr);
     msg.msg_iov = &iov;
     msg.msg_iovlen = 1;
-
-    printf("Sending message to kernel\n");
     sendmsg(sock_fd, &msg, 0);
-    printf("Waiting for message from kernel\n");
 
     /* Read message from kernel */
     recvmsg(sock_fd, &msg, 0);
